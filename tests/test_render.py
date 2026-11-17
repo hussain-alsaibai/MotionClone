@@ -65,3 +65,23 @@ def test_font_fallback_keeps_family_and_weight(monkeypatch,tmp_path,family,weigh
         assert Path(chosen[0]).name==face
     finally:
         font_for.cache_clear()
+
+
+@pytest.mark.parametrize('width,height,long_edge,short_edge',[
+    (320,180,320,180),   # landscape fixture: under the cap, unchanged
+    (720,1280,960,540),  # portrait: 960/width > 1 used to skip the downscale
+])
+def test_preview_caps_the_longest_edge(tmp_path,width,height,long_edge,short_edge):
+    source=tmp_path/'clip.mp4'
+    subprocess.run(['ffmpeg','-y','-v','error','-f','lavfi','-i',f'color=c=red:s={width}x{height}:r=12:d=0.5',
+                    '-c:v','libx264','-pix_fmt','yuv420p',str(source)],check=True)
+    stop=threading.Event()
+    prepare(source,tmp_path,stop,lambda *a:None)
+    plan=Plan(background='#0000ff',tracks=[Track(id='title',kind='text',text='PREVIEW',start=0,end=1,
+                     keyframes=[Keyframe(t=0,x=.2,y=.3,w=.6,h=.4)])])
+    result=render(tmp_path,plan,Brief(mode='rebuild',keep_audio=False),stop,lambda *a:None,preview=True)
+    meta=probe(result)
+    assert max(meta['width'],meta['height'])==long_edge
+    assert min(meta['width'],meta['height'])==short_edge
+    # x264 requires even dimensions; the rounding must survive the new ratio.
+    assert meta['width']%2==0 and meta['height']%2==0

@@ -131,7 +131,10 @@ def draw_layer(base, track, t, logo=None):
 
 def render(folder, plan, brief, cancel, progress, *, preview=False):
     meta=json.loads((folder/'media.json').read_text(encoding='utf-8'))
-    ratio=min(1,960/meta['width']) if preview else 1
+    # Preview is a cheap pass for review, so cap the LONGEST edge at 960.
+    # Capping the width alone left portrait clips (1080x1920, 720x1280)
+    # near full resolution because 960/width > 1 for them.
+    ratio=min(1,960/max(meta['width'],meta['height'])) if preview else 1
     W=round(meta['width']*ratio/2)*2;H=round(meta['height']*ratio/2)*2
     # Preserve every source frame during review; dropping to 12 fps hid cut-boundary errors.
     fps=meta['fps']

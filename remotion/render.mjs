@@ -38,6 +38,6 @@ fs.mkdirSync(path.dirname(destination),{recursive:true});
 try {
   await renderMedia({serveUrl:bundleDir,composition,inputProps:project,outputLocation:destination,
     codec:'h264',crf:preview?24:18,concurrency:2,browserExecutable,cancelSignal,muted:!project.audio,
-    scale:preview?Math.min(1,960/composition.width):1,
+    scale:preview?Math.min(1,960/Math.max(composition.width,composition.height)):1,
     onProgress:({progress}) => process.stdout.write(JSON.stringify({progress:Math.round(progress*100)})+'\n')});
 } finally {if(timer) clearInterval(timer);}
